@@ -1,4 +1,5 @@
 /*
+ * https://raw.github.com/chemass/tag-it/master/js/tag-it.js
 * jQuery UI Tag-it!
 *
 * @version v2.0 (06/2011)
@@ -74,9 +75,13 @@
 
 
             // Event callbacks.
-            onTagAdded  : null,
-            onTagRemoved: null,
-            onTagClicked: null
+            beforeAdding: null,
+            beforeCreateValidate: null,
+            afterAdding: null,
+            beforeRemoving: null,
+            afterRemoving: null,
+            onTagClicked: null,
+            onBlur: null
         },
 
 
@@ -97,7 +102,7 @@
                 this.tagList = this.element.find('ul, ol').andSelf().last();
             }
 
-            this._tagInput = $('<input type="text" />').addClass('ui-widget-content');
+            this._tagInput = $('<input type="text" />').addClass('ui-widget-content').blur(function () { that._trigger('onBlur', null) });
             if (this.options.tabIndex) {
                 this._tagInput.attr('tabindex', this.options.tabIndex);
             }
@@ -207,12 +212,8 @@
                         // So let's ensure that it closes.
                         that._tagInput.autocomplete('close');
                     }
-                }).blur(function(e){
-                    // Create a tag when the element loses focus (unless it's empty).
-                    that.createTag(that._cleanedInput());
-                });
+                })
                 
-
             // Autocomplete.
             if (this.options.availableTags || this.options.tagSource) {
                 this._tagInput.autocomplete({
@@ -224,9 +225,9 @@
                         // The only artifact of this is that while the user holds down the mouse button
                         // on the selected autocomplete item, a tag is shown with the pre-autocompleted text,
                         // and is changed to the autocompleted text upon mouseup.
-                        if (that._tagInput.val() === '') {
-                            that.removeTag(that._lastTag(), false);
-                        }
+                        //if (that._tagInput.val() === '') {
+                        //  that.removeTag(that._lastTag(), false);
+                        //}
                         that.createTag(ui.item.value);
                         // Preventing the tag input to be updated with the chosen value.
                         return false;
@@ -312,6 +313,10 @@
             if (!this._isNew(value) || value === '') {
                 return false;
             }
+            
+            if ( this._trigger('beforeCreateValidate', null, value ) != true ){
+				return false;            	
+            }
 
             var label = $(this.options.onTagClicked ? '<a class="tagit-label"></a>' : '<span class="tagit-label"></span>').text(value);
 
@@ -342,14 +347,18 @@
                 var escapedValue = label.html();
                 tag.append('<input type="hidden" style="display:none;" value="' + escapedValue + '" name="' + this.options.itemName + '[' + this.options.fieldName + '][]" />');
             }
-
-            this._trigger('onTagAdded', null, tag);
-
+            if ( this._trigger('beforeAdding', null, tag ) != true ){
+            	//abort
+				return false;            	
+            }
+			
             // Cleaning the input.
             this._tagInput.val('');
 
             // insert tag
             this._tagInput.parent().before(tag);
+
+            this._trigger('afterAdding', null, tag);
         },
         
         removeTag: function(tag, animate) {
@@ -357,7 +366,7 @@
 
             tag = $(tag);
 
-            this._trigger('onTagRemoved', null, tag);
+            this._trigger('beforeRemoving', null, tag);
 
             if (this.options.singleField) {
                 var tags = this.assignedTags();
@@ -369,12 +378,18 @@
             }
             // Animate the removal.
             if (animate) {
-                tag.fadeOut('fast').hide('blind', {direction: 'horizontal'}, 'fast', function(){
-                    tag.remove();
-                }).dequeue();
+            	tag.fadeOut('fast').animate({width: "hide"}, 50, function(){
+                	tag.remove();
+            	}).dequeue();
+                /*tag.fadeOut('fast').hide('blind', {direction: 'horizontal'}, 'fast', function(){
+                *    tag.remove();
+                *}).dequeue();
+                * */
             } else {
                 tag.remove();
             }
+
+            this._trigger('afterRemoving', null, tag);
         },
 
         removeAll: function() {
@@ -388,5 +403,4 @@
     });
 
 })(jQuery);
-
 
