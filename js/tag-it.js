@@ -313,9 +313,17 @@
             if (!this._isNew(value) || value === '') {
                 return false;
             }
-            
-            if ( this._trigger('beforeCreateValidate', null, value ) != true ){
-				return false;            	
+
+            if ( $.isFunction( this.options.beforeCreateValidate )) {
+                var validated = this.options.beforeCreateValidate.apply(this.element[0], [null, value]);
+                if ($.type(validated) === 'string') {
+                    value = $.trim(validated);
+                    if (value === '') {
+                        return false;
+                    }
+                } else if (validated != true ){
+                    return false;
+                }
             }
 
             var label = $(this.options.onTagClicked ? '<a class="tagit-label"></a>' : '<span class="tagit-label"></span>').text(value);
